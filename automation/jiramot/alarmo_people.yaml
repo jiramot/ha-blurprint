@@ -1,0 +1,50 @@
+blueprint:
+  name: Auto Arm/Disarm Alarmo Based on Presence
+  description: Automatically arm/disarm Alarmo based on whether people are home or away.
+  domain: automation
+  input:
+    alarmo_entity:
+      name: Alarmo Entity
+      description: The Alarmo control panel entity to arm/disarm.
+      selector:
+        entity:
+          domain: alarm_control_panel
+    people_entities:
+      name: People Entities
+      description: Select the person entities to track.
+      selector:
+        target:
+          entity:
+            domain: person
+
+trigger:
+  - platform: state
+    entity_id: !input 'people_entities'
+
+variables:
+  alarmo_entity: !input alarmo_entity
+  people_entities: !input people_entities
+
+condition: []
+
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >
+              {% set people = states|selectattr('entity_id','in',people_entities)|map(attribute='state')|list %}
+              {{ 'home' not in people }}
+        sequence:
+          - service: alarm_control_panel.alarm_arm_away
+            target:
+              entity_id: "{{ alarmo_entity }}"
+      - conditions:
+          - condition: template
+            value_template: >
+              {% set people = states|selectattr('entity_id','in',people_entities)|map(attribute='state')|list %}
+              {{ 'home' in people }}
+        sequence:
+          - service: alarm_control_panel.alarm_disarm
+            target:
+              entity_id: "{{ alarmo_entity }}"
+    default: []

@@ -1,0 +1,74 @@
+blueprint:
+  name: Sensibo Aircon Toggle with Input Settings
+  description: |
+    Turn on or off Sensibo Air Conditioner with mode and temperature/delay options.
+  domain: script
+  input:
+    sensibo_device:
+      name: Sensibo Device
+      description: Select your Sensibo climate entity
+      selector:
+        entity:
+          domain: climate
+    operation:
+      name: Operation
+      description: Choose to turn on or turn off the AC
+      default: "on"
+      selector:
+        select:
+          options:
+            - label: "Turn On"
+              value: "on"
+            - label: "Turn Off"
+              value: "off"
+    target_temp:
+      name: Target Temperature
+      description: Temperature to set when turning on (°C)
+      default: 25
+      selector:
+        number:
+          min: 16
+          max: 30
+          unit_of_measurement: °C
+    off_delay:
+      name: Turn Off Delay
+      description: Delay before turning off after switching to fan mode (minutes)
+      default: 10
+      selector:
+        number:
+          min: 1
+          max: 60
+          unit_of_measurement: min
+
+mode: single
+
+sequence:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ operation | default('on') == 'on' }}"
+        sequence:
+          - service: climate.set_hvac_mode
+            target:
+              entity_id: !input sensibo_device
+            data:
+              hvac_mode: cool
+          - service: climate.set_temperature
+            target:
+              entity_id: !input sensibo_device
+            data:
+              temperature: !input target_temp
+      - conditions:
+          - condition: template
+            value_template: "{{ operation | default('on') == 'off' }}"
+        sequence:
+          - service: climate.set_hvac_mode
+            target:
+              entity_id: !input sensibo_device
+            data:
+              hvac_mode: fan_only
+          - delay:
+              minutes: !input off_delay
+          - service: climate.turn_off
+            target:
+              entity_id: !input sensibo_device
