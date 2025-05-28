@@ -53,12 +53,13 @@ sequence:
   - variables:
       current_operation: !input operation
       current_sensibo_device: !input sensibo_device
+      current_target_temp: !input target_temp # Make target_temp available as a variable
 
   - service: system_log.write
     data:
       level: info
       message: >
-        [Sensibo AC] Operation value: {{ current_operation }}. Device: {{ current_sensibo_device }}
+        [Sensibo AC] Operation value: {{ current_operation }}. Device: {{ current_sensibo_device }}. Target Temp: {{ current_target_temp }}
 
   - choose:
       - conditions:
@@ -75,7 +76,8 @@ sequence:
             target:
               entity_id: !input sensibo_device
             data:
-              temperature: !input target_temp
+              # Use the defined variable 'current_target_temp' here
+              temperature: "{{ current_target_temp }}"
 
       - conditions:
           - condition: template
