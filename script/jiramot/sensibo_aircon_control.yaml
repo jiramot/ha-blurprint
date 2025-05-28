@@ -1,8 +1,11 @@
 blueprint:
-  name: Sensibo Aircon Toggle with Input Settings
-  description: |
-    Turn on or off Sensibo Air Conditioner with mode and temperature/delay options.
+  name: Sensibo Aircon Toggle
+  description: >
+    Toggle a Sensibo AC by selecting device and action.
+    "on" = cool mode + temperature,
+    "off" = fan mode, delay, then turn off.
   domain: script
+
   input:
     sensibo_device:
       name: Sensibo Device
@@ -10,6 +13,7 @@ blueprint:
       selector:
         entity:
           domain: climate
+
     operation:
       name: Operation
       description: Choose to turn on or turn off the AC
@@ -21,6 +25,7 @@ blueprint:
               value: "on"
             - label: "Turn Off"
               value: "off"
+
     target_temp:
       name: Target Temperature
       description: Temperature to set when turning on (°C)
@@ -30,8 +35,9 @@ blueprint:
           min: 16
           max: 30
           unit_of_measurement: °C
+
     off_delay:
-      name: Turn Off Delay
+      name: Turn Off Delay (min)
       description: Delay before turning off after switching to fan mode (minutes)
       default: 10
       selector:
@@ -43,10 +49,22 @@ blueprint:
 mode: single
 
 sequence:
+  # Define variables at the sequence level to make them accessible throughout
+  - variables:
+      current_operation: !input operation
+      current_sensibo_device: !input sensibo_device
+
+  - service: system_log.write
+    data:
+      level: info
+      message: >
+        [Sensibo AC] Operation value: {{ current_operation }}. Device: {{ current_sensibo_device }}
+
   - choose:
       - conditions:
           - condition: template
-            value_template: "{{ operation | default('on') == 'on' }}"
+            # Access blueprint input directly by name
+            value_template: "{{ current_operation == 'on' }}"
         sequence:
           - service: climate.set_hvac_mode
             target:
@@ -58,9 +76,11 @@ sequence:
               entity_id: !input sensibo_device
             data:
               temperature: !input target_temp
+
       - conditions:
           - condition: template
-            value_template: "{{ operation | default('on') == 'off' }}"
+            # Access blueprint input directly by name
+            value_template: "{{ current_operation == 'off' }}"
         sequence:
           - service: climate.set_hvac_mode
             target:
