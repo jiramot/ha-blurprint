@@ -39,7 +39,7 @@ blueprint:
     off_delay:
       name: Turn Off Delay (min)
       description: Delay before turning off after switching to fan mode (minutes)
-      default: 10
+      default: 30
       selector:
         number:
           min: 1
@@ -53,7 +53,7 @@ sequence:
   - variables:
       current_operation: !input operation
       current_sensibo_device: !input sensibo_device
-      current_target_temp: !input target_temp # Make target_temp available as a variable
+      current_target_temp: !input target_temp
 
   - service: system_log.write
     data:
@@ -64,7 +64,6 @@ sequence:
   - choose:
       - conditions:
           - condition: template
-            # Access blueprint input directly by name
             value_template: "{{ current_operation == 'on' }}"
         sequence:
           - service: climate.set_hvac_mode
@@ -72,16 +71,21 @@ sequence:
               entity_id: !input sensibo_device
             data:
               hvac_mode: cool
+          - delay:
+              seconds: 5
           - service: climate.set_temperature
             target:
               entity_id: !input sensibo_device
             data:
-              # Use the defined variable 'current_target_temp' here
               temperature: "{{ current_target_temp }}"
+          - service: climate.set_fan_mode
+            target:
+              entity_id: !input sensibo_device
+            data:
+              fan_mode: auto
 
       - conditions:
           - condition: template
-            # Access blueprint input directly by name
             value_template: "{{ current_operation == 'off' }}"
         sequence:
           - service: climate.set_hvac_mode
@@ -89,6 +93,11 @@ sequence:
               entity_id: !input sensibo_device
             data:
               hvac_mode: fan_only
+          - service: climate.set_fan_mode
+            target:
+              entity_id: !input sensibo_device
+            data:
+              fan_mode: auto
           - delay:
               minutes: !input off_delay
           - service: climate.turn_off
